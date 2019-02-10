@@ -50,8 +50,11 @@ void run_kws();
 int main()
 {
   pc.baud(9600);
+  printf("\rRunning KWS Inference\n");
   kws = new KWS_F746NG(recording_win,averaging_window_len);
   init_plot();
+  printf("\r   Class   |  Accuracy |   Time  |\n");
+  printf("\r----------------------------------\n");
   kws->start_kws();
 
   T.start();
@@ -104,14 +107,24 @@ void BSP_AUDIO_IN_HalfTransfer_CallBack(void)
 
 void run_kws()
 {
+  int beg, end;
+
+  beg = T.read_us();
+
   kws->extract_features();    //extract mfcc features
   kws->classify();	      //classify using dnn
   kws->average_predictions();
+
+  end = T.read_us();
+
   plot_mfcc();
   plot_waveform();
   int max_ind = kws->get_top_class(kws->averaged_output);
-  if(kws->averaged_output[max_ind]>detection_threshold*128/100)
+  if(kws->averaged_output[max_ind]>detection_threshold*128/100) {
     sprintf(lcd_output_string,"%d%% %s",((int)kws->averaged_output[max_ind]*100/128),output_class[max_ind]);
+    printf("\r%10s |%10d |%8d |\n", output_class[max_ind], ((int)kws->averaged_output[max_ind]*100/128), (end - beg));
+  }
+
   lcd.ClearStringLine(8);
   lcd.DisplayStringAt(0, LINE(8), (uint8_t *) lcd_output_string, CENTER_MODE);
 }
